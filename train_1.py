@@ -1,10 +1,4 @@
 #!/home/avian-flu/miniconda3/bin/python3
-
-'''
-이 스크립트는 블로그 포스트 "Building powerful image classification models using very little data"에 따라 작성되었습니다.
-개와 고양이 이미지 데이터셋을 사용합니다.
-'''
-
 import os
 import tensorflow as tf
 from keras.preprocessing.image import ImageDataGenerator
@@ -20,7 +14,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import precision_score, recall_score, f1_score
 from keras.callbacks import Callback
 
-# GPU 메모리 설정
+# GPU memory setting
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -28,23 +22,23 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
-# 시스템 인수 처리
+# Handling System Arguments
 if len(sys.argv) > 1:
     nlay = sys.argv[1]
 else:
-    nlay = 'default_layer_value'  # 기본값 설정
+    nlay = 'default_layer_value'  # Default setting
 
 if len(sys.argv) > 2:
     trial = sys.argv[2]
 else:
-    trial = 'default_trial_value'  # 기본값 설정
+    trial = 'default_trial_value'  # Default setting
 
-# 모델 저장 경로 설정
+# Set the model storage path
 MODEL_SAVE_FOLDER_PATH = './model1/'
 if not os.path.exists(MODEL_SAVE_FOLDER_PATH):
     os.mkdir(MODEL_SAVE_FOLDER_PATH)
 
-# 이미지 데이터 설정
+# image data setting
 img_width, img_height = 150, 150
 train_data_dir = 'data/train'
 validation_data_dir = 'data/validation'
@@ -53,13 +47,13 @@ nb_validation_samples = 800
 epochs = 50
 batch_size = 16
 
-# Keras 백엔드 설정
+# Keras back-end setting
 if K.image_data_format() == 'channels_first':
     input_shape = (3, img_width, img_height)
 else:
     input_shape = (img_width, img_height, 3)
 
-# 모델 생성
+# Create a Model
 model = Sequential()
 model.add(Conv2D(32, (3, 3), input_shape=input_shape))
 model.add(Activation('relu'))
@@ -84,7 +78,7 @@ model.compile(loss='binary_crossentropy',
               optimizer='rmsprop',
               metrics=['accuracy'])
 
-# 데이터 전처리
+# data preprocessing
 train_datagen = ImageDataGenerator(
     rescale=1. / 255,
     shear_range=0.2,
@@ -105,7 +99,7 @@ validation_generator = test_datagen.flow_from_directory(
     batch_size=batch_size,
     class_mode='binary')
 
-# Custom Callback 클래스 정의
+# Define Custom Callback Classes
 class Metrics(Callback):
     def __init__(self, validation_data):
         super().__init__()
@@ -126,7 +120,7 @@ class Metrics(Callback):
         print(f" — val_precision: {_val_precision} — val_recall: {_val_recall} — val_f1: {_val_f1}")
         return
 
-# validation 데이터를 가져오기 위한 함수
+# Function to import validation data
 def get_validation_data(generator, steps):
     batchX, batchY = [], []
     for i in range(steps):
@@ -135,15 +129,15 @@ def get_validation_data(generator, steps):
         batchY.extend(y)
     return np.array(batchX), np.array(batchY)
 
-# validation 데이터를 준비
+# Preparing validation data
 val_steps = nb_validation_samples // batch_size
 val_data, val_labels = get_validation_data(validation_generator, val_steps)
 validation_data = (val_data, val_labels)
 
-# 콜백 인스턴스 생성
+# Create a Callback Instance
 metrics = Metrics(validation_data)
 
-# 콜백 설정 및 모델 학습
+# Set up a callback and learn the model
 from keras.callbacks import EarlyStopping
 early_stopping = EarlyStopping(monitor='val_loss', mode='min', min_delta=0.01, verbose=0, patience=10, restore_best_weights=True)
 
@@ -159,11 +153,11 @@ hist = model.fit(
     epochs=epochs,
     validation_data=validation_generator,
     validation_steps=nb_validation_samples // batch_size,
-    callbacks=[tb_hist, early_stopping, cb_checkpoint, metrics])  # 추가된 metrics 콜백
+    callbacks=[tb_hist, early_stopping, cb_checkpoint, metrics])  # Added metrics callback
 
 model.save('final_model_layer{}_trial{}.h5'.format(nlay, trial))
 
-# 학습 결과 시각화
+# Visualize learning outcomes
 fig, loss_ax = plt.subplots()
 
 acc_ax = loss_ax.twinx()
