@@ -6,13 +6,13 @@ import sys
 import os
 
 def evaluate_model(model_path, test_data_dir, batch_size=16):
-    # 모델 로드
+    # model load
     model = load_model(model_path)
     
-    # 모델의 입력 크기를 확인
+    # Check the input size of the model
     input_shape = model.input_shape[1:3]
 
-    # 데이터 전처리
+    # data preprocessing
     test_datagen = ImageDataGenerator(rescale=1. / 255)
 
     test_generator = test_datagen.flow_from_directory(
@@ -22,16 +22,16 @@ def evaluate_model(model_path, test_data_dir, batch_size=16):
         class_mode='binary',
         shuffle=False)
 
-    # 예측 수행
+    # Performing predictions
     test_steps = test_generator.samples // test_generator.batch_size
     test_generator.reset()
     pred = model.predict(test_generator, steps=test_steps, verbose=1)
     pred_classes = np.round(pred).astype(int)
 
-    # 실제 라벨 가져오기
+    # Import physical label
     true_classes = test_generator.classes[:len(pred_classes)]
 
-    # 점수 계산
+    # calculation of scores
     precision = precision_score(true_classes, pred_classes)
     recall = recall_score(true_classes, pred_classes)
     f1 = f1_score(true_classes, pred_classes)
