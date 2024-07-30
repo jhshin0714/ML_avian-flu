@@ -11,7 +11,7 @@ def load_image(img_path, target_size=(400, 400)):
     img_tensor /= 255.
     return img_tensor
 
-# 모델 파일 이름 목록
+# model file list 
 model_files = [
     "model/layer0_trial1_best_for_model0.hdf5",
     "model/layer1_trial1_best_for_model1.hdf5",
@@ -22,25 +22,25 @@ model_files = [
     "model/layer6_trial1_best_for_model6.hdf5"
 ]
 
-# 모델 로드
+# model load
 models = [load_model(model_file) for model_file in model_files]
 
-# 이미지 파일 디렉토리 및 이미지 파일 목록
-image_dir = "../revision/alphafold/07_gif2jpg"  # 여기에 이미지 디렉토리 경로를 입력하세요
+# image directory and list load
+image_dir = "in/put/your image"  
 image_files = [f for f in os.listdir(image_dir) if f.endswith('.png') or f.endswith('.jpg')]
 
-# 결과를 저장할 데이터프레임
+# Data frames to store results
 results = pd.DataFrame(columns=["image"] + [f"model_{i}" for i in range(len(models))])
 
-# 이미지 로드 및 예측
+# Load and predict images
 for image_file in image_files:
     image_path = os.path.join(image_dir, image_file)
     new_image = load_image(image_path)
 
-    # 각 모델에 대해 예측 수행
+    # Perform predictions for each model
     predictions = [model.predict_classes(new_image)[0][0] for model in models]
     results = results.append({"image": image_file, **{f"model_{i}": pred for i, pred in enumerate(predictions)}}, ignore_index=True)
 
-# 결과를 CSV 파일로 저장
+# Save results as CSV files
 results.to_csv("model_predictions.csv", index=False)
 
