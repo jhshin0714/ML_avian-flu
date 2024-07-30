@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
-# 전체적인 PDB file에서 C-alpha 원자 좌표를 추출하는 function
+# function to extract C-alpha atomic coordinates from the overall PDB file
 def extract_coordinates(pdb_file):
     parser = PDBParser()
     structure = parser.get_structure('protein', pdb_file)
@@ -16,36 +16,36 @@ def extract_coordinates(pdb_file):
                     coords.append(residue["CA"].get_coord())
     return np.array(coords).flatten()
 
-# pdb file들 가져오기.
+# Import pdb files
 neu_files = [os.path.join("neu_1", f) for f in os.listdir("neu_1") if f.endswith('.pdb')]
 pathogen_files = [os.path.join("highly_pathogen", f) for f in os.listdir("highly_pathogen") if f.endswith('.pdb')]
 
-#좌표 추출
+#coordinate extraction
 neu_coords = [extract_coordinates(f) for f in neu_files]
 pathogen_coords = [extract_coordinates(f) for f in pathogen_files]
 all_coords = neu_coords + pathogen_coords
 labels = ['neutral'] * len(neu_coords) + ['pathogenic'] * len(pathogen_coords)
 
-# atom의 길이가 모두 다르기 떄문에, zero padding을 적용
-max_length = max(len(coords) for coords in all_coords) # 모든 좌표 중 가장 긴 길이
+# Since the atom has different lengths, apply zero padding
+max_length = max(len(coords) for coords in all_coords) # Longest of all coordinates
 padded_coords = []
 for coords in all_coords:
     padding_length = max_length - len(coords)
     padded_coords.append(np.pad(coords, (0, padding_length), 'constant'))
 
-# Data 정규화
+# Data normalization
 from sklearn.preprocessing import StandardScaler
 scaler = StandardScaler()
 normalized_coords = scaler.fit_transform(padded_coords)
 
-#PCA 수행
+#PCA perform
 pca = PCA(n_components=4)
 principal_components = pca.fit_transform(padded_coords)
 principalDf = pd.DataFrame(data=principal_components, columns=['PC1', 'PC2', 'PC3', 'PC4'])
 principalDf['Class'] = labels
-principalDf.to_csv('pca_results.csv', index=False) # PCA data 저장
+principalDf.to_csv('pca_results.csv', index=False) # PCA data save
 
-# 모든 주성분의 조합을 통해 PCA plot을 그리기
+# Draw a PCA plot through a combination of all the main ingredients
 import itertools
 combinations = list(itertools.combinations(['PC1', 'PC2', 'PC3', 'PC4'], 2))
 for comb in combinations:
@@ -59,7 +59,7 @@ for comb in combinations:
     plt.title(f'PCA of Protein structures using {comb[0]} and {comb[1]}')
     plt.show()
 
-# abnormality detection 수행 및 ROC curve 그리기 (one - class SVM model)
+# Perform abnormality detection and draw ROC curves (one - class SVM model)
 from sklearn import svm
 from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import LabelBinarizer
@@ -67,7 +67,7 @@ from sklearn.preprocessing import LabelBinarizer
 data = pd.read_csv("pca_results.csv")
 lb = LabelBinarizer()
 data['binary_class'] = lb.fit_transform(data['Class'])
-#레이블 반전이 필요할때
+#need a label reversal
 data['binary_class'] = [-1 if label == 'neutral' else 1 for label in data['Class']]
 
 neutral_data = data[data['Class'] == 'neutral']
@@ -89,14 +89,14 @@ plt.title('Receiver Operating Characteristic (ROC) Curve for PC Combinations')
 plt.legend(loc="lower right")
 plt.show()
 
-# 과적합 방지와 부트스트래핑을 통해 average ROC curve 그리기
-## 부트스트래핑을 위한 함수
+# Draw average ROC curves with overfitting protection and bootstrapping
+## Function for bootstrapping
 def bootstrap_sample(data, n=1):
     return [data.sample(n=len(data), replace=True) for _ in range(n)]
 
 clf = svm.OneClassSVM(nu=0.5, kernel="rbf", gamma=0.1)
 plt.figure(figsize=(10, 8))
-N_ITER = 100  # 부트스트래핑 반복 횟수
+N_ITER = 100  # Number of bootstrapping iterations
 
 for comb in combinations:
     mean_fpr = np.linspace(0,1,100)
@@ -117,12 +117,12 @@ plt.title('Average ROC Curve from Bootstrapping for PC Combinations')
 plt.legend(loc="lower right")
 plt.show()
 
-######## 최종적인 abnormality detection ROC curve
+######## Finaly abnormality detection ROC curve
 data = pd.read_csv('pca_results.csv')
 lb = LabelBinarizer(neg_label=-1)
 data['binary_class'] = lb.fit_transform(data['Class'])
 
-# 색상 설정
+# color setting
 color_map = {
     ('PC1', 'PC2'): '#0015FF',
     ('PC1', 'PC3'): '#FF00A1',
@@ -134,11 +134,11 @@ color_map = {
 
 combinations = list(color_map.keys())
 
-# 부트스트래핑 함수
+# Bootstrapping function
 def bootstrap_sample(data, n=1):
     return [data.sample(n=len(data), replace=True) for _ in range(n)]
 
-# ROC Curve 그리기
+# Draw ROC Curve
 plt.figure(figsize=(10, 10))
 N_ITER = 100
 auc_scores = {}
@@ -170,12 +170,12 @@ plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
 plt.title('Average ROC Curve from Bootstrapping for PC Combinations')
 
-# 레전드 순서를 변경하고 다시 플롯을 표시
+# Change the legend order and display the plot again
 order = np.argsort([-auc_scores[tuple(label.split(' (')[0].split(' & '))] if " & " in label else (-np.inf,) for label in labels])
 ordered_handles = [handles[idx] for idx in order]
 ordered_labels = [labels[idx] for idx in order]
 
-# Random Guess가 이미 레전드에 있으면 추가하지 않음
+# Don't add random Guess if it's already in Legend
 if 'Random Guess' not in ordered_labels:
     ordered_handles.append(plt.Line2D([0], [0], color='navy', lw=2, linestyle='--'))
     ordered_labels.append('Random Guess')
@@ -185,7 +185,7 @@ plt.legend(ordered_handles, ordered_labels, loc="lower right")
 plt.show()
 
 
-#unsupervised learning 진행
+#unsupervised learning perform
 from sklearn.utils import resample
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
