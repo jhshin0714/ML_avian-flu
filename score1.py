@@ -6,12 +6,12 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.preprocessing import image
 import tensorflow as tf
 
-# 이미지 데이터 설정
+# Image Data Settings
 img_width, img_height = 150, 150
 validation_data_dir = 'data/validation'
 batch_size = 16
 
-# validation 데이터를 가져오기 위한 함수
+# Function to import validation data
 def get_validation_data(generator, steps, img_width, img_height):
     batchX, batchY = [], []
     for _ in range(steps):
@@ -21,7 +21,7 @@ def get_validation_data(generator, steps, img_width, img_height):
         batchY.extend(y)
     return np.array(batchX), np.array(batchY)
 
-# 데이터 전처리
+# data preprocessing
 test_datagen = ImageDataGenerator(rescale=1. / 255)
 
 validation_generator = test_datagen.flow_from_directory(
@@ -31,12 +31,12 @@ validation_generator = test_datagen.flow_from_directory(
     class_mode='binary',
     shuffle=False)
 
-# validation 데이터를 준비
+# Preparing validation data
 nb_validation_samples = 800
 val_steps = nb_validation_samples // batch_size
 val_data, val_labels = get_validation_data(validation_generator, val_steps, img_width, img_height)
 
-# 모델 파일 리스트
+# Model File List
 model_files = [
     'final_model_layer0_trial1.h5',
     'final_model_layer1_trial1.h5',
@@ -47,7 +47,7 @@ model_files = [
     'final_model_layer6_trial1.h5'
 ]
 
-# 현재 디렉토리에서 모델이 존재하는지 확인하고 평가
+# Check and evaluate if the model exists in the current directory
 current_dir = os.getcwd()
 for model_file in model_files:
     model_path = os.path.join(current_dir, model_file)
@@ -57,7 +57,7 @@ for model_file in model_files:
     
     model = load_model(model_path)
     
-    # 모델 입력 크기 확인 및 설정
+    # Verifying and Setting the Model Input Size
     if hasattr(model, 'input_shape'):
         if model.input_shape[1:3] != (img_width, img_height):
             print(f"Model {model_file} was constructed with input shape {model.input_shape[1:3]}. Resizing inputs.")
@@ -67,11 +67,11 @@ for model_file in model_files:
     else:
         val_data_resized = val_data
     
-    # 예측 수행
+    # Performing predictions
     val_predict = np.asarray(model.predict(val_data_resized))
     val_predict = np.round(val_predict)
     
-    # 점수 계산
+    # calculation of scores
     _val_precision = precision_score(val_labels, val_predict)
     _val_recall = recall_score(val_labels, val_predict)
     _val_f1 = f1_score(val_labels, val_predict)
